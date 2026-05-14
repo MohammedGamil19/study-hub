@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  isPremium     Boolean   @default(false)
+  premiumSince  DateTime?
+  language      String    @default("en")
+  dailyStudyGoal Int      @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  subjects          Subject[]
+  streakRecord      StreakRecord?
+  pushSubscriptions PushSubscription[]
+  pointTransactions PointTransaction[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+model StreakRecord {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  totalPoints    Int       @default(0)
+  lastActivityAt DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streak_records")
+}
+
+model PointTransaction {
+  id          String      @id @default(cuid())
+  userId      String
+  points      Int
+  reason      String
+  referenceId String?
+  multiplier  Float       @default(1.0)
+  createdAt   DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("point_transactions")
+}
+
+model Subject {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  nameAr     String?
+  color      String   @default("#6366f1")
+  icon       String   @default("📚")
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduleEvents   ScheduleEvent[]
+  chapters         Chapter[]
+  lectures         Lecture[]
+  reviews          Review[]
+  exams            Exam[]
+  tasks            Task[]
+  pomodoroSessions PomodoroSession[]
+
+  @@map("subjects")
+}
+
+model ScheduleEvent {
+  id           String   @id @default(cuid())
+  subjectId    String
+  title        String
+  dayOfWeek    Int
+  startTime    String
+  endTime      String
+  notifyBefore Int      @default(15)
+  notifiedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("schedule_events")
+}
+
+model Chapter {
+  id          String    @id @default(cuid())
+  subjectId   String
+  title       String
+  orderIndex  Int       @default(0)
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("chapters")
+}
+
+model Lecture {
+  id           String    @id @default(cuid())
+  subjectId    String
+  title        String
+  dayOfWeek    Int
+  startTime    String
+  endTime      String
+  location     String?
+  notifyBefore Int       @default(15)
+  notifiedAt   DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("lectures")
+}
+
+model Review {
+  id            String    @id @default(cuid())
+  subjectId     String
+  title         String
+  scheduledAt   DateTime
+  notifyBefore  Int       @default(15)
+  notifiedAt    DateTime?
+  status        String    @default("PENDING")
+  completedAt   DateTime?
+  notes         String?
+  pointsAwarded Int?
+  createdAt     DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Exam {
+  id           String    @id @default(cuid())
+  subjectId    String
+  title        String
+  type         String    @default("EXAM")
+  scheduledAt  DateTime
+  location     String?
+  notes        String?
+  notifyBefore Int       @default(15)
+  notifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("exams")
+}
+
+model Task {
+  id           String    @id @default(cuid())
+  subjectId    String
+  title        String
+  description  String?
+  dueDate      DateTime?
+  priority     String    @default("MEDIUM")
+  status       String    @default("PENDING")
+  completedAt  DateTime?
+  isRecurring  Boolean   @default(false)
+  recurringDay Int?
+  createdAt    DateTime  @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+model PomodoroSession {
+  id           String   @id @default(cuid())
+  subjectId    String
+  userId       String
+  durationMins Int
+  type         String   @default("STUDY")
+  startedAt    DateTime
+  endedAt      DateTime
+  createdAt    DateTime @default(now())
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("pomodoro_sessions")
+}
