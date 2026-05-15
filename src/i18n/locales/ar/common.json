@@ -204,5 +204,15 @@
   "planLabel": "الخطة",
   "demoNote": "تجريبي: انقر لفتح جميع مميزات بريميوم فوراً",
   "premiumActive": "بريميوم مفعّل ✓",
-  "subjects_label": "مواد"
+  "subjects_label": "مواد",
+  "perMonth": "/ شهر",
+  "premiumSubtitle": "كل ما تحتاجه لمذاكرة أذكى",
+  "securePayment": "دفع آمن عبر PayPal",
+  "cancelAnytime": "إلغاء في أي وقت. بدون رسوم خفية.",
+  "cancelSubscription": "إلغاء الاشتراك",
+  "cancelSubConfirm": "هل أنت متأكد من إلغاء اشتراكك؟ ستفقد وصول بريميوم فوراً.",
+  "cancelSubNote": "يسري الإلغاء فوراً.",
+  "subscriptionCancelled": "تم إلغاء الاشتراك. تم إزالة وصول بريميوم.",
+  "paypalError": "فشل الدفع. حاول مرة أخرى أو تواصل مع الدعم.",
+  "paypalNotConfigured": "لم يتم إعداد PayPal بعد. تواصل مع المسؤول."
 }

@@ -204,5 +204,15 @@
   "planLabel": "Plan",
   "demoNote": "Demo: Click to unlock all premium features instantly",
   "premiumActive": "Premium Active ✓",
-  "subjects_label": "Subjects"
+  "subjects_label": "Subjects",
+  "perMonth": "/ month",
+  "premiumSubtitle": "Everything you need to study smarter",
+  "securePayment": "Secure payment via PayPal",
+  "cancelAnytime": "Cancel anytime. No hidden fees.",
+  "cancelSubscription": "Cancel Subscription",
+  "cancelSubConfirm": "Are you sure you want to cancel your subscription? You will lose premium access immediately.",
+  "cancelSubNote": "Cancellation takes effect immediately.",
+  "subscriptionCancelled": "Subscription cancelled. Premium access removed.",
+  "paypalError": "Payment failed. Please try again or contact support.",
+  "paypalNotConfigured": "PayPal payments are not yet configured. Contact the admin."
 }
