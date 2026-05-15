@@ -30,6 +30,42 @@ async function getAccessToken(): Promise<string> {
   return data.access_token as string;
 }
 
+/**
+ * Create a PayPal subscription and return the URL the user must visit to approve it.
+ * Used by the redirect-based checkout flow.
+ */
+export async function getSubscriptionApprovalUrl(
+  planId: string,
+  { returnUrl, cancelUrl }: { returnUrl: string; cancelUrl: string }
+): Promise<string> {
+  const token = await getAccessToken();
+  const res = await fetch(`${BASE}/v1/billing/subscriptions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "PayPal-Request-Id": `sub-${Date.now()}`,
+    },
+    body: JSON.stringify({
+      plan_id: planId,
+      application_context: {
+        brand_name: "Study Hub",
+        locale: "en-US",
+        shipping_preference: "NO_SHIPPING",
+        user_action: "SUBSCRIBE_NOW",
+        return_url: returnUrl,
+        cancel_url: cancelUrl,
+      },
+    }),
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+  const approvalLink = (data.links as any[])?.find((l: any) => l.rel === "approve");
+  if (!approvalLink) throw new Error(`PayPal subscription error: ${JSON.stringify(data)}`);
+  return approvalLink.href as string;
+}
+
 /** Fetch subscription details from PayPal. */
 export async function getSubscription(subscriptionId: string) {
   const token = await getAccessToken();

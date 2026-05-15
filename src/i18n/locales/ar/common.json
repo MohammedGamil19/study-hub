@@ -214,5 +214,8 @@
   "cancelSubNote": "يسري الإلغاء فوراً.",
   "subscriptionCancelled": "تم إلغاء الاشتراك. تم إزالة وصول بريميوم.",
   "paypalError": "فشل الدفع. حاول مرة أخرى أو تواصل مع الدعم.",
-  "paypalNotConfigured": "لم يتم إعداد PayPal بعد. تواصل مع المسؤول."
+  "paypalNotConfigured": "لم يتم إعداد PayPal بعد. تواصل مع المسؤول.",
+  "subscribeWithPayPal": "اشترك عبر PayPal",
+  "redirectingToPayPal": "جاري التوجيه إلى PayPal...",
+  "paymentCancelled": "تم إلغاء الدفع. يمكنك المحاولة مرة أخرى."
 }

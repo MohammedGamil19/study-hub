@@ -214,5 +214,8 @@
   "cancelSubNote": "Cancellation takes effect immediately.",
   "subscriptionCancelled": "Subscription cancelled. Premium access removed.",
   "paypalError": "Payment failed. Please try again or contact support.",
-  "paypalNotConfigured": "PayPal payments are not yet configured. Contact the admin."
+  "paypalNotConfigured": "PayPal payments are not yet configured. Contact the admin.",
+  "subscribeWithPayPal": "Subscribe with PayPal",
+  "redirectingToPayPal": "Redirecting to PayPal...",
+  "paymentCancelled": "Payment cancelled. You can try again anytime."
 }

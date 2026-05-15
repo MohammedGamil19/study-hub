@@ -2,25 +2,39 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/stores/useAppStore";
 import { Crown, Globe, Bell, Zap, CheckCircle2, Lock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { data: session, update } = useSession();
   const { language, setLanguage, isFocusMode, toggleFocusMode } = useAppStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [subscribing, setSubscribing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [paypalError, setPaypalError] = useState("");
 
   const isPremium = session?.user?.isPremium;
+  const paypalConfigured = !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-  const paypalPlanId = process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID;
-  const paypalReady = !!paypalClientId && !!paypalPlanId;
+  // Handle redirect back from PayPal
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (payment === "success") {
+      update().then(() => showToast(t("premiumActivated"), "success"));
+      router.replace("/settings");
+    } else if (payment === "cancelled") {
+      showToast(t("paymentCancelled"), "error");
+      router.replace("/settings");
+    } else if (payment === "error") {
+      showToast(t("paypalError"), "error");
+      router.replace("/settings");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setNotifEnabled("Notification" in window && Notification.permission === "granted");
@@ -28,8 +42,25 @@ export default function SettingsPage() {
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 5000);
   }
+
+  const startSubscription = async () => {
+    setSubscribing(true);
+    try {
+      const res = await fetch("/api/payments/paypal/create-subscription", { method: "POST" });
+      const data = await res.json();
+      if (data.approvalUrl) {
+        window.location.href = data.approvalUrl; // redirect to PayPal
+      } else {
+        showToast(data.error ?? t("paypalError"), "error");
+        setSubscribing(false);
+      }
+    } catch {
+      showToast(t("paypalError"), "error");
+      setSubscribing(false);
+    }
+  };
 
   const enableNotifications = async () => {
     if (!("Notification" in window)) return;
@@ -49,21 +80,6 @@ export default function SettingsPage() {
           body: JSON.stringify(sub),
         });
       }
-    }
-  };
-
-  const handleSubscriptionApproved = async (subscriptionId: string) => {
-    const res = await fetch("/api/payments/paypal/capture", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subscriptionId }),
-    });
-    if (res.ok) {
-      await update(); // refresh Next‑Auth session so isPremium flips
-      showToast(t("premiumActivated"), "success");
-    } else {
-      const d = await res.json();
-      showToast(d.error ?? t("error"), "error");
     }
   };
 
@@ -200,44 +216,31 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* PayPal button */}
-            {paypalReady ? (
+            {/* PayPal subscribe button */}
+            {paypalConfigured ? (
               <div className="space-y-2">
-                <p className="text-xs text-center text-gray-500 font-medium">{t("securePayment")}</p>
-                {paypalError && (
-                  <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3 text-center">
-                    {paypalError}
-                  </div>
-                )}
-                <PayPalScriptProvider
-                  options={{
-                    clientId: paypalClientId!,
-                    vault: true,
-                    intent: "subscription",
-                  }}
+                <button
+                  onClick={startSubscription}
+                  disabled={subscribing}
+                  className="w-full py-3.5 bg-[#FFC439] hover:bg-[#f0b72f] disabled:opacity-60 text-[#003087] font-bold rounded-xl flex items-center justify-center gap-2.5 transition-colors shadow-sm text-sm"
                 >
-                  <PayPalButtons
-                    style={{ layout: "vertical", color: "gold", shape: "pill", label: "subscribe" }}
-                    createSubscription={(_data, actions) =>
-                      (actions.subscription as any).create({ plan_id: paypalPlanId! })
-                    }
-                    onApprove={async (data) => {
-                      setPaypalError("");
-                      await handleSubscriptionApproved(data.subscriptionID!);
-                    }}
-                    onError={(err) => {
-                      console.error("PayPal error:", err);
-                      setPaypalError(t("paypalError"));
-                    }}
-                    onCancel={() => {
-                      // user closed the PayPal window — no action needed
-                    }}
-                  />
-                </PayPalScriptProvider>
+                  {subscribing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#003087] border-t-transparent rounded-full animate-spin" />
+                      {t("redirectingToPayPal")}
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#003087">
+                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.813.76-4.813.075-.476.47-.826.952-.826h.598c3.978 0 7.093-1.615 8.004-6.285.384-1.995.195-3.66-.207-4.371z"/>
+                      </svg>
+                      {t("subscribeWithPayPal")}
+                    </>
+                  )}
+                </button>
                 <p className="text-xs text-center text-gray-400">{t("cancelAnytime")}</p>
               </div>
             ) : (
-              /* Fallback if env vars not configured yet */
               <div className="text-center py-4 text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                 <Crown size={24} className="mx-auto mb-2 text-gray-300" />
                 {t("paypalNotConfigured")}
