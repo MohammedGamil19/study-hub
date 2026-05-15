@@ -4,34 +4,31 @@ import { useParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { Calendar, Timer, BookMarked, Video, RotateCcw, FileText, CheckSquare, ChevronRight } from "lucide-react";
+import { getCached, setCached } from "@/lib/clientCache";
 
-interface Stats { chapters: number; completedChapters: number; tasks: number; completedTasks: number; lectures: number; reviews: number; exams: number; studyMins: number; }
+interface Stats {
+  chapters: number;
+  completedChapters: number;
+  tasks: number;
+  completedTasks: number;
+  lectures: number;
+  reviews: number;
+  exams: number;
+  studyMins: number;
+}
 
 export default function SubjectOverviewPage() {
   const { t } = useTranslation();
   const { subjectId } = useParams<{ subjectId: string }>();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const cacheKey = `subject-stats:${subjectId}`;
+  const [stats, setStats] = useState<Stats | null>(() => getCached<Stats>(cacheKey));
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/chapters?subjectId=${subjectId}`).then(r => r.json()),
-      fetch(`/api/tasks?subjectId=${subjectId}`).then(r => r.json()),
-      fetch(`/api/lectures?subjectId=${subjectId}`).then(r => r.json()),
-      fetch(`/api/reviews?subjectId=${subjectId}`).then(r => r.json()),
-      fetch(`/api/exams?subjectId=${subjectId}`).then(r => r.json()),
-      fetch(`/api/pomodoro?subjectId=${subjectId}`).then(r => r.json()),
-    ]).then(([chapters, tasks, lectures, reviews, exams, pomodoro]) => {
-      setStats({
-        chapters: chapters.length,
-        completedChapters: chapters.filter((c: any) => c.isCompleted).length,
-        tasks: tasks.length,
-        completedTasks: tasks.filter((t: any) => t.status === "COMPLETED").length,
-        lectures: lectures.length,
-        reviews: reviews.length,
-        exams: exams.length,
-        studyMins: pomodoro.totalMins || 0,
-      });
-    });
+    const cached = getCached<Stats>(cacheKey);
+    if (cached) setStats(cached);
+    fetch(`/api/subjects/${subjectId}/stats`)
+      .then((r) => r.json())
+      .then((data) => { setCached(cacheKey, data); setStats(data); });
   }, [subjectId]);
 
   const quickLinks = [
@@ -47,12 +44,21 @@ export default function SubjectOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      {stats && (
+      {stats ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label={t("chapters")} value={`${stats.completedChapters}/${stats.chapters}`} sub={t("completed")} color="text-green-600" />
           <StatCard label={t("tasks")} value={`${stats.completedTasks}/${stats.tasks}`} sub={t("completed")} color="text-indigo-600" />
           <StatCard label={t("studyHours")} value={`${Math.floor(stats.studyMins / 60)}h ${stats.studyMins % 60}m`} sub={t("today")} color="text-purple-600" />
           <StatCard label={t("upcomingExams")} value={stats.exams} sub={t("exams")} color="text-red-600" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+              <div className="h-3 w-16 bg-gray-100 rounded mb-2" />
+              <div className="h-6 w-12 bg-gray-200 rounded" />
+            </div>
+          ))}
         </div>
       )}
 
@@ -61,7 +67,11 @@ export default function SubjectOverviewPage() {
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{t("overview")}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {quickLinks.map(({ href, icon: Icon, label, color }) => (
-            <Link key={href} href={href} className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow group">
+            <Link
+              key={href}
+              href={href}
+              className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow group"
+            >
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
                 <Icon size={18} />
               </div>
@@ -82,10 +92,14 @@ export default function SubjectOverviewPage() {
             </span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-              style={{ width: `${Math.round((stats.completedChapters / stats.chapters) * 100)}%` }} />
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+              style={{ width: `${Math.round((stats.completedChapters / stats.chapters) * 100)}%` }}
+            />
           </div>
-          <p className="text-xs text-gray-400 mt-2">{stats.completedChapters} of {stats.chapters} {t("chapters")} {t("completed")}</p>
+          <p className="text-xs text-gray-400 mt-2">
+            {stats.completedChapters} of {stats.chapters} {t("chapters")} {t("completed")}
+          </p>
         </div>
       )}
     </div>

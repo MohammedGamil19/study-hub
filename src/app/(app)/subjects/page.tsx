@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useSession } from "next-auth/react";
 import { Plus, BookOpen, Crown, Trash2, ChevronRight } from "lucide-react";
 import { FREE_SUBJECT_LIMIT } from "@/lib/utils";
+import { getCached, setCached, invalidateCache } from "@/lib/clientCache";
 
 interface Subject {
   id: string; name: string; nameAr: string | null; color: string; icon: string;
@@ -12,15 +13,23 @@ interface Subject {
   chapters: { isCompleted: boolean }[];
 }
 
+const CACHE_KEY = "subjects";
+
 export default function SubjectsPage() {
   const { t } = useTranslation();
   const { data: session } = useSession();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState<Subject[]>(() => getCached<Subject[]>(CACHE_KEY) ?? []);
+  const [loading, setLoading] = useState(() => !getCached(CACHE_KEY));
 
   const fetchSubjects = async () => {
+    const cached = getCached<Subject[]>(CACHE_KEY);
+    if (cached) { setSubjects(cached); setLoading(false); }
     const res = await fetch("/api/subjects");
-    if (res.ok) setSubjects(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setCached(CACHE_KEY, data);
+      setSubjects(data);
+    }
     setLoading(false);
   };
 
@@ -29,7 +38,10 @@ export default function SubjectsPage() {
   const deleteSubject = async (id: string) => {
     if (!confirm(t("deleteConfirm") + "\n" + t("deleteWarning"))) return;
     await fetch(`/api/subjects/${id}`, { method: "DELETE" });
-    setSubjects((s) => s.filter((x) => x.id !== id));
+    const updated = subjects.filter((x) => x.id !== id);
+    setSubjects(updated);
+    setCached(CACHE_KEY, updated);
+    invalidateCache("dashboard");
   };
 
   const atLimit = !session?.user?.isPremium && subjects.length >= FREE_SUBJECT_LIMIT;

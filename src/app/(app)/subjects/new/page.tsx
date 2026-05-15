@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { invalidateCache } from "@/lib/clientCache";
 
 const COLORS = ["#6366f1","#ec4899","#f59e0b","#10b981","#3b82f6","#8b5cf6","#ef4444","#14b8a6"];
 const ICONS = ["📚","🧮","🔬","💻","🌍","📖","🎨","🏛️","⚗️","🧬","📐","🎵","🏃","💡","📝","🌱"];
@@ -29,6 +30,7 @@ export default function NewSubjectPage() {
     });
     if (res.ok) {
       const s = await res.json();
+      invalidateCache("subjects", "dashboard");
       router.push(`/subjects/${s.id}`);
     } else {
       const d = await res.json();

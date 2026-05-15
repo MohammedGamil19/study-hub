@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Calendar, Timer, BookMarked, Video, RotateCcw, FileText, CheckSquare, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getCached, setCached } from "@/lib/clientCache";
 
 interface Subject { id: string; name: string; nameAr?: string; color: string; icon: string; }
 
@@ -12,10 +13,15 @@ export default function SubjectLayout({ children }: { children: React.ReactNode 
   const { t } = useTranslation();
   const { subjectId } = useParams<{ subjectId: string }>();
   const pathname = usePathname();
-  const [subject, setSubject] = useState<Subject | null>(null);
+  const cacheKey = `subject:${subjectId}`;
+  const [subject, setSubject] = useState<Subject | null>(() => getCached<Subject>(cacheKey));
 
   useEffect(() => {
-    fetch(`/api/subjects/${subjectId}`).then(r => r.json()).then(setSubject);
+    const cached = getCached<Subject>(cacheKey);
+    if (cached) setSubject(cached);
+    fetch(`/api/subjects/${subjectId}`)
+      .then((r) => r.json())
+      .then((data) => { setCached(cacheKey, data); setSubject(data); });
   }, [subjectId]);
 
   const tabs = [
